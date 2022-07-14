@@ -17,29 +17,21 @@ from functools import lru_cache
 def cached_add(x: int, y: int) -> int:
     return x + y
 ```
-When `add(x, y)` is called the numbers are loaded and placed onto the stack followed by a binary add that pops them off and returns their sum to the top of the stack:
-```
-  2           0 LOAD_FAST                0 (x)
-              2 LOAD_FAST                1 (y)
-              4 BINARY_ADD
-              6 RETURN_VALUE
-```
-However when `cached_add(x, y)` is called something more interesting happens. Simply dissasembling it doesn't tell us much:
-```
-Disassembly of __wrapped__:
-  3           0 LOAD_FAST                0 (x)
-              2 LOAD_FAST                1 (y)
-              4 BINARY_ADD
-              6 RETURN_VALUE
+In subsequent calls with the same arguments the function will not evaluate but rather retrieve a cached value:
+```python
+# we have never called it before!
+add_cached(x=1, y=2)
+cached_add.cache_info()
+# >>> CacheInfo(hits=0, misses=1, maxsize=128, currsize=1)
+add_cached(y=2, x=1)
+cached_add.cache_info()
+# >>> CacheInfo(hits=0, misses=2, maxsize=128, currsize=2)
 
-Disassembly of cache_parameters:
-520           0 LOAD_DEREF               0 (maxsize)
-              2 LOAD_DEREF               1 (typed)
-              4 LOAD_CONST               1 (('maxsize', 'typed'))
-              6 BUILD_CONST_KEY_MAP      2
-              8 RETURN_VALUE
+# now let's call one from before
+add_cached(x=1, y=2)
+cached_add.cache_info()
+# >>> CacheInfo(hits=1, misses=2, maxsize=128, currsize=2) # note the size stays the same!
 ```
-We can see our original function in `__wrapped__` but we also now have some strange opcodes in `cache_parameters` as well as even stranger arguments? what is `typed`!? Let's find out!
 
 ## LRU Cache Implementation
 
@@ -171,7 +163,7 @@ def simple_key(args, kwargs):
 cached_add(x=1, y=2)
 cached_add(y=2, x=1)
 cached_add.cache_info()
->>> CacheInfo(hits=0, misses=2, maxsize=128, currsize=2)
+# >>> CacheInfo(hits=0, misses=2, maxsize=128, currsize=2)
 ```
 ***This is due to the fact that sorting of keyword args was switched off to improve speed.***
 
