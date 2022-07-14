@@ -1,4 +1,4 @@
-# CPython stdlib ep1: How does Python Cache work?
+# CPython stdlib ep1: How does Functools Cache work?
 
 As part of our low-level CPython series exploring the standard library we will explore functools caching functionality! Specifically [LRU cache](https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU)).
 
