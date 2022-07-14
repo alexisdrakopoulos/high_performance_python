@@ -136,7 +136,7 @@ def _make_key(
         return key[0]
     return _HashedSeq(key)
 ```
-so we see our `args` and `kwargs` (named `kwds` here) as well as some other default arguments that we don't touch. Note that `args` are in the form of a tuple of argument values eg `f(5, 10) -> (5, 10)` and `kwargs` are dictionaries `f(x=5, y=10) -> {"x": 5, "y": 10}`.
+we see our `args` and `kwargs` (named `kwds` here) as well as some other default arguments that we don't touch. Note that `args` are in the form of a tuple of argument values eg `f(5, 10) -> (5, 10)` and `kwargs` are dictionaries `f(x=5, y=10) -> {"x": 5, "y": 10}`.
 
 First we handle the special case in which no `kwargs` passed and only a single integer or string `args` is passed. If that is true we simply return its value; `_make_key((5,), {}) -> 5` or `_make_key(("Hello!,"), {}) -> 'Hello'`.
 
@@ -223,7 +223,7 @@ def update_wrapper(
 ```
 Here the wrapper is the function we want to make look like our wrapped (user function) func. We do this by transplanting relevent attributes outlined above using `setattr`, and by finally updating the `__dict__`.
 
-Just to make it clear here is what happens to the `user_function` let's go over its entire journey once over. We first pass it to `lru_cache` which passes it to `decorating_function`. `decorating_function` then passes it to `_lru_cache_wrapper` and gets back a `wrapper`:
+Just to make it clear on what journey our `user_function` takes let's look at it with only calls and returns. We first pass it to `lru_cache` which passes it to `decorating_function`. `decorating_function` then passes it to `_lru_cache_wrapper` and gets back a `wrapper`:
 ```python
 def lru_cache(user_function):
     def decorating_function(user_function):
