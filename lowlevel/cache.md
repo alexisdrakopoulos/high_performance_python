@@ -45,7 +45,7 @@ We can see our original function in `__wrapped__` but we also now have some stra
 
 lru_cache is implemented in Python [here](https://github.com/python/cpython/blob/6cbb57f62d345d7a5d6aeb1b3b5d37a845344d5e/Lib/functools.py#L479) and, with the noisy code removed, is quite simple:
 ```python
-def lru_cache():
+def lru_cache(user_function):
 
     def decorating_function(user_function):
         wrapper = _lru_cache_wrapper(user_function)
@@ -175,8 +175,6 @@ cached_add.cache_info()
 ```
 ***This is due to the fact that sorting of keyword args was switched off to improve speed.***
 
-
-
 At this point you might wonder why does `_HashedSeq(key)` exist? To reduce the amount of hashing we have to do! If you recall the innards of the `_lru_cache_wrapper` from before, we have a small inner check that looks something like:
 ```python
     # get a hash key
@@ -206,6 +204,59 @@ class _HashedSeq(list):
 
     def __hash__(self):
         return self.hashvalue
+```
+
+### `update_wrapper`
+
+We left `update_wrapper` until the very end due to it not being particularly interesting. It exists solely to return a wrapper that looks like the original function! That's the `__wrapper__` we saw at the very start. 
+
+The code is fairly short too:
+```python
+WRAPPER_ASSIGNMENTS = (
+    "__module__",
+    "__name__",
+    "__qualname__",
+    "__doc__",
+    "__annotations__",
+)
+WRAPPER_UPDATES = ("__dict__",)
+
+def update_wrapper(
+    wrapper, wrapped, assigned=WRAPPER_ASSIGNMENTS, updated=WRAPPER_UPDATES
+):
+    for attr in assigned:
+        try:
+            value = getattr(wrapped, attr)
+        except AttributeError:
+            pass
+        else:
+            setattr(wrapper, attr, value)
+    for attr in updated:
+        getattr(wrapper, attr).update(getattr(wrapped, attr, {}))
+    # Issue #17482: set __wrapped__ last so we don't inadvertently copy it
+    # from the wrapped function when updating __dict__
+    wrapper.__wrapped__ = wrapped
+    # Return the wrapper so this can be used as a decorator via partial()
+    return wrapper
+```
+Here the wrapper is the function we want to make look like our wrapped (user function) func. We do this by transplanting relevent attributes outlined above using `setattr`, and by finally updating the `__dict__`.
+
+Just to make it clear here is what happens to the `user_function` let's go over its entire journey once over. We first pass it to `lru_cache` which passes it to `decorating_function`. `decorating_function` then passes it to `_lru_cache_wrapper` and gets back a `wrapper`:
+```python
+def lru_cache(user_function):
+    def decorating_function(user_function):
+        wrapper = _lru_cache_wrapper(user_function)
+        return update_wrapper(wrapper, user_function)
+    return decorating_function
+```
+where `wrapper`, without the caching, is just a function that calls the wrapper and returns its result (hence being identical to the function in operation):
+```python
+def _lru_cache_wrapper(user_function):
+    def wrapper(*args, **kwargs):
+        # do caching stuff here
+        result = user_function(*args, **kwargs)
+        return result
+    return wrapper
 ```
 
 ## Conclusion
